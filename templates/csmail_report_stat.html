@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% block content %}
+
+{{ macros.m_row_start('0') }}
+{{ macros.m_row_end() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<div>
+  <form id="form_search" name="from_search" class="form-inline" style="text-align:left">
+    <div class="container-fluid">
+      <div class="row show-grid">
+        <span class="col-md-12">
+          <select name="option_tr" id="option_tr" class="form-control form-control-sm">
+          </select>
+          <select name="option_dept" id="option_dept" class="form-control form-control-sm">
+          </select>
+	      <input id="keyword" name="keyword" class="form-control form-control-sm w-50" type="text" placeholder="성명 or 부서" aria-label="Search">
+          {{ macros.m_button_group([['globalSearchSeachBtn', '검색'], ['globalSearchResetBtn', '리셋']]) }}
+        </span>
+      </div>
+    </div>
+  </form>
+  <div>
+    <br>
+    <div align="center" id="ChartTitle"></div>
+    {{ macros.m_hr() }}
+    <canvas id="myChart"></canvas>
+  </div>
+</div>
+
+<script type="text/javascript">
+var package_name = "{{arg['package_name'] }}";
+var sub = "{{arg['sub']}}";
+var current_data = null;
+var current_page = 1;
+var formData = null;
+var deptlist = {{deptlist|tojson}}
+var traininglist = {{traininglist|tojson}}
+var start_training_id = "{{arg['start_training_id']}}"
+const ctx = document.getElementById('myChart');
+var myChart = null;
+
+$(document).ready(function(){
+  console.log(deptlist);
+  set_option_tr();
+  set_option_dept();
+  request_search('1');
+});
+
+function set_option_tr() {
+  form_search.option_tr.options[0] = new Option('전체훈련', 'all');
+  for (var i = 0; i < traininglist.length; i++) {
+    form_search.option_tr.options[i+1] = new Option(traininglist[i].name, traininglist[i].id);
+    if (start_training_id != '') {
+      if (start_training_id == traininglist[i].id) form_search.option_tr.options[i+1].selected = true;
+    }
+  }
+}
+
+function set_option_dept() {
+  form_search.option_dept.options[0] = new Option('전체부서', 'all');
+  for (var i = 0; i < deptlist.length; i++) {
+    form_search.option_dept.options[i+1] = new Option(deptlist[i], deptlist[i]);
+  }
+}
+
+$("body").on('change', '#option_tr,#option_dept', function(e){
+  e.preventDefault();
+  request_search(1);
+});
+
+function request_search(page, move_top=true) {
+  var formData = getFormdata('#form_search');
+  formData += '&page='+page;
+  globalSendCommand('summary', formData, null, null, function(data) {
+    if (data.ret == 'success') {
+      current_data = data;
+      make_chart(data.list);
+    }
+  });
+}
+
+function get_training(training_id) {
+  for (var data in traininglist) {
+    if (data[i].id == training_id)
+        return data[i];
+  }
+  return null;
+}
+
+function _rstr(str, num, total) {
+  return str+'('+(num/total*100).toFixed(1)+'%)';
+}
+
+function make_chart(data) {
+  var str = "";
+  var total = 0;
+  var read = 0;
+  var infect = 0;
+  var report = 0;
+  var rnr = 0;
+  var inr = 0;
+
+  console.log(data)
+
+  for (i in data) {
+    total += data[i].total_cnt;
+    read += data[i].read_cnt;
+    infect += data[i].infect_cnt;
+    report += data[i].report_cnt;
+    rnr += (data[i].report_read_cnt - read);
+    inr += (data[i].report_infect_cnt - infect);
+  }
+
+  if (myChart != null) {
+    myChart.destroy();
+  }
+  let delayed;
+
+  if (total == 0) {
+    var tmp = "<h4>조건에 맞는 결과가 없습니다</h4>";
+    document.getElementById("ChartTitle").innerHTML = tmp;
+    return;
+  } else {
+    var e = document.getElementById("option_tr");
+    var tr_title = e.options[e.selectedIndex].text;
+    var tmp = "<h4>&lt;훈련결과 통계:"+tr_title+"&gt;</h4>";
+    document.getElementById("ChartTitle").innerHTML = tmp;
+  }
+
+  myChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['전체대상자(100%)', _rstr('열람자',read,total), _rstr('감염자',infect,total), _rstr('신고자',report,total), _rstr('열람미신고',rnr,total), _rstr('감염미신고',inr,total)],
+      datasets: [{
+        label: '# 건수',
+        data: [total, read, infect, report, rnr, inr],
+        backgroundColor: [
+          'rgba(54, 162, 235, 0.2)',
+          'rgba(255, 206, 86, 0.2)',
+          'rgba(75, 192, 192, 0.2)',
+          'rgba(153, 102, 255, 0.2)',
+          'rgba(255, 99, 132, 0.2)',
+          'rgba(255, 159, 64, 0.2)'
+        ],
+        borderColor: [
+          'rgba(54, 162, 235, 1)',
+          'rgba(255, 206, 86, 1)',
+          'rgba(75, 192, 192, 1)',
+          'rgba(153, 102, 255, 1)',
+          'rgba(255, 99, 132, 1)',
+          'rgba(255, 159, 64, 1)'
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      animation: {
+        onComplete: () => {
+          delayed = true;
+        },
+        delay: (context) => {
+          let delay = 0;
+          if (context.type === 'data' && context.mode === 'default' && !delayed) {
+            delay = context.dataIndex * 300 + context.datasetIndex * 100;
+          }
+          return delay;
+        },
+        scales: { x: { stacked: true, }, y: { stacked: true } }
+      },
+    }
+  });
+}
+
+function j_button_tt(id, text, data, outline_color, tooltip='', pos='down', size='medium') {
+  var str = '<button id="'+id+'" name="'+id+'" class="btn btn-sm btn-outline-'+outline_color+'" '
+  if (tooltip == '') str += ' aria-label="' +text+'"';
+  else str += ' aria-label="' +tooltip+'"';
+  str += ' data-balloon-pos="' +pos+ '" data-balloon-length="'+size+'"';
+  for ( var i in data) {
+    str += ' data-' + data[i].key + '="' + data[i].value+ '" '
+  }
+  str += '>' + text + '</button>';
+  return str;
+}
+
+</script>    
+{% endblock %}

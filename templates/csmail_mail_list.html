@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% block content %}
+
+{{ macros.m_row_start('0') }}
+{{ macros.m_row_end() }}
+
+<div>
+  <form id="form_search" name="from_search" class="form-inline" style="text-align:left">
+    <div class="container-fluid">
+      <div class="row show-grid">
+        <span class="col-md-12">
+          {{ macros.m_button_group([['register_mail_modal_btn','훈련메일등록']]) }}
+            <!--
+          <select name="option1" id="option1" class="form-control form-control-sm">
+          </select>
+          <select name="option2" id="option2" class="form-control form-control-sm">
+          </select> -->
+	      <input id="keyword" name="keyword" class="form-control form-control-sm w-75" type="text" placeholder="제목입력" aria-label="Search">
+          {{ macros.m_button_group([['globalSearchSearchBtn', '검색'], ['globalSearchResetBtn', '리셋']]) }}
+        </span>
+       </div>
+    </div>
+  </form>
+  <div id='page1'></div>
+  {{ macros.m_hr_head_top() }}
+  {{ macros.m_row_start('0') }}
+  {{ macros.m_col(1, macros.m_strong('ID')) }}
+  {{ macros.m_col(2, macros.m_strong('등록/수정시각')) }}
+  {{ macros.m_col(2, macros.m_strong('메일명')) }}
+  {{ macros.m_col(3, macros.m_strong('메일제목')) }}
+  {{ macros.m_col(4, macros.m_strong('기능')) }}
+  {{ macros.m_row_end() }}
+  {{ macros.m_hr_head_bottom() }}
+  <div id="list_div"></div>
+  <div id='page2'></div>
+</div>
+
+<!-- Modal:등록 -->
+<div class="modal fade" id="register_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="modal_title">수신자등록</h4>
+      </div>
+      <div class="modal-body" id="modal_body" style="word-break:break-all;">
+	<form id="register_form" name="register_form">
+      {{ macros.setting_input_text('name', '등록이름', placeholder='등록이름') }}
+      {{ macros.setting_input_text('title', '메일제목', placeholder='메일제목입력') }}
+      {{ macros.setting_input_text('query_title', '검색용제목', placeholder='메일신고DB조회시 검색용으로 사용할 제목') }}
+      {{ macros.setting_select('mime_type', 'MimeType', [['text/html', 'text/html'], ['text/plain','text/plain']]) }}
+      {{ macros.setting_input_textarea('mail_text','메일내용', col='9',row='9')}}
+      {{ macros.info_text('reserved_text','예약어', desc=['{emp_code}: 사번, {name}: 이름','{dept}: 부서명, {email}:메일주소', '{read}: 읽음확인용 코드(서버에서 자동변환삽입함)','{infect}: 링크클릭URL 자동생성용, 링크클릭 내용에 삽입', ' 예시: <href="{infect}" target="_blank">링크클릭</a>']) }}
+    </form>
+	</form>
+      </div>
+      <div class="modal-footer" style="align-items:right;">
+         {{ macros.m_button_group([['register_mail_btn', '저장'], ['modal_hide_btn', '닫기']])}}
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal: 등록 END -->
+
+<!-- Modal: 수정 -->
+<div class="modal fade" id="modify_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="m_modal_title">훈련 메일 수정</h4>
+      </div>
+      <div class="modal-body" id="modal_body" style="word-break:break-all;">
+	<form id="modify_form" name="modify_form">
+      <input type='hidden' id="mail_id" name="mail_id">
+      {{ macros.setting_input_text('m_name', '등록이름', placeholder='등록이름') }}
+      {{ macros.setting_input_text('m_title', '메일제목', placeholder='메일제목입력') }}
+      {{ macros.setting_input_text('m_query_title', '검색용제목', placeholder='메일신고DB조회시 검색용으로 사용할 제목') }}
+      {{ macros.setting_select('m_mime_type', 'MimeType') }}
+      {{ macros.info_text_and_buttons('m_mail_path', '메일파일', [['globalEditBtn', '편집하기', [['file', '']]]]) }}
+      {{ macros.info_text('reserved_text','예약어', desc=['{emp_code}: 사번, {name}: 이름','{dept}: 부서명, {email}:메일주소', '{read}: 읽음확인용 코드(서버에서 자동변환삽입함)','{infect}: 링크클릭URL 자동생성용, 링크클릭 내용에 삽입', ' 예시: <href="{infect}" target="_blank">링크클릭</a>']) }}
+    </form>
+      </div>
+      <div class="modal-footer" style="align-items:right;">
+         {{ macros.m_button_group([['mail_modify_btn', '저장'], ['mail_remove_btn', '삭제'], ['m_modal_hide_btn', '닫기']])}}
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal: 수정END -->
+
+<!-- 메일 미리보기용 모달 --> 
+<div class="modal fade" id="preview_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="mail_preview_title"></h4>
+      </div>
+      <div class="modal-body" id="modal_body" style="word-break:break-all;padding:0.5rem;">
+        <span id="html_preview"></span>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">닫기</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal: END -->
+
+
+<script type="text/javascript">
+var package_name = "{{arg['package_name'] }}";
+var sub = "{{arg['sub']}}";
+var current_data = null;
+var current_page = null;
+var formData = null;
+var curr_data = null;
+
+$(document).ready(function(){
+  globalRequestSearch('1');
+});
+
+function make_list(data) {
+  var str = "";
+  var btn_str = "";
+  var tmp = "";
+
+  if (data.length == 0)
+    str += '<tr><td colspan="6"><h4>데이터가 없습니다</h4></td></tr>';
+  for (var i in data) {
+    //console.log(data[i].id+','+data[i].name+','+data[i].dept);
+    str += j_row_start();
+    str += j_col(1, data[i].id);
+    tmp = '생성: '+data[i].created_time + '<br>';
+    tmp += '수정: '+data[i].updated_time;
+    str += j_col(2, tmp);
+    str += j_col(2, data[i].name);
+    str += j_col(3, data[i].title);
+
+    btn_str = j_button_tt('modify_mail_btn', '수정', {'idx':i}, 'success', tooltip='등록된 메일정보 수정/삭제', pos='up');
+    btn_str += j_button_tt('globalEditBtn', '메일편집', {'file':data[i].mail_path}, 'primary', tooltip='메일내용편집하기', pos='up');
+    btn_str += j_button_tt('previe_mail_btn', '미리보기', {'id':data[i].id}, 'info', tooltip='메일미리보기', pos='up');
+    
+    tmp = j_button_group(btn_str)
+    str += j_col(4, tmp);
+    str += j_row_end();
+    if (i != data.length -1) str += j_hr();
+  }
+  $("#list_div").html(str);
+  console.log('make_list done');
+}
+
+$("body").on('click', '#register_mail_modal_btn', function(e) {
+  e.preventDefault();
+  $("#register_modal").modal();
+});
+
+$("body").on('click', '#modify_mail_btn', function(e) {
+  e.preventDefault();
+  console.log(current_data);
+  var idx = $(this).data('idx');
+  var mail = current_data.list[idx];
+  $('#mail_id').val(mail.id);
+  $('#m_name').val(mail.name);
+  $('#m_title').val(mail.title);
+  $('#m_query_title').val(mail.query_title);
+  modify_form.m_mime_type.options[0] = new Option('text/html', 'text/html');
+  modify_form.m_mime_type.options[1] = new Option('text/plain', 'text/plain');
+  if (mail.mime_type == 'text/html') modify_form.m_mime_type.options[0].selected = true;
+  if (mail.mime_type == 'text/plain') modify_form.m_mime_type.options[1].selected = true;
+  document.getElementById('m_mail_path').innerHTML = mail.mail_path;
+  modify_form.globalEditBtn.setAttribute('data-file', mail.mail_path);
+  $("#modify_modal").modal();
+});
+
+$('#register_modal').on('hidden.bs.modal', function () {
+})
+$('#modify_modal').on('hidden.bs.modal', function () {
+})
+$('#preview_modal').on('hidden.bs.modal', function () {                                                                                                                                                                        
+});
+
+function j_button_tt(id, text, data={}, outline_color, tooltip='', pos='down', size='medium') {
+  var str = '<button id="'+id+'" name="'+id+'" class="btn btn-sm btn-outline-'+outline_color+'" '
+  if (tooltip == '') str += ' aria-label="' +text+'"';
+  else str += ' aria-label="' +tooltip+'"';
+  str += ' data-balloon-pos="' +pos+ '" data-balloon-length="'+size+'"';
+  for (var key in data) {
+    str += ' data-' + key + '="' + data[key]+ '" '
+  }
+  str += '>' + text + '</button>';
+  return str;
+}
+
+$("body").on('click', '#modal_hide_btn', function(e){
+  e.preventDefault();
+  $('#register_modal').modal('hide');
+});
+
+$("body").on('click', '#m_modal_hide_btn', function(e){
+  e.preventDefault();
+  $('#modify_modal').modal('hide');
+});
+
+
+$("body").on('click', '#register_mail_btn', function(e){
+  e.preventDefault();
+  var formData = getFormdata('#register_form');
+  globalSendCommand('register_mail', formData, null, null, function(ret){
+    if (ret.ret == 'success') {
+      $('#register_modal').modal('hide');
+      globalRequestSearch('1')
+    }
+    else {
+      notify(ret.data, 'warning');
+    }
+  });
+});
+
+
+$("body").on('click', '#mail_modify_btn', function(e){
+  e.preventDefault();
+  var formData = getFormdata('#modify_form');
+  globalSendCommand('modify_mail', formData, null, null, function(ret){
+    if (ret.ret == 'success') {
+      $('#modify_modal').modal('hide');
+      globalRequestSearch(current_page, move_top=false);
+    }
+    else {
+      notify(ret.data, 'warning');
+    }
+  });
+});
+
+
+$("body").on('click', '#mail_remove_btn', function(e){
+  e.preventDefault();
+  var mail_id = document.getElementById('mail_id').value;
+  var name = document.getElementById('m_name').value;
+  globalConfirmModal('메일 삭제', name+'('+mail_id+') 메일을 삭제하시겠습니까?', function() {
+    globalSendCommand('remove_mail', mail_id, null, null, function(ret){
+      if (ret.ret == 'success') {
+        $('#modify_modal').modal('hide');
+        globalRequestSearch(current_page, move_top=false);
+      } else {
+        notify(ret.data, 'warning');
+      }
+    });
+  });
+});
+
+$("body").on('click', '#include_rcpt_btn', function(e){
+  e.preventDefault();
+  var idx = $(this).data('idx');
+  var rcpt = current_data.list[idx];
+  globalSendCommand('include_rcpt', rcpt.id, null, null, function(ret){
+    if (ret.ret == 'success') {
+      notify(ret.data, 'success');
+    }
+    else {
+      notify(ret.data, 'warning');
+    }
+    globalRequestSearch(current_page, false);
+  });
+});
+
+$("body").on('click', '#exclude_rcpt_btn', function(e){
+  e.preventDefault();
+  var idx = $(this).data('idx');
+  var rcpt = current_data.list[idx];
+  globalSendCommand('exclude_rcpt', rcpt.id, null, null, function(ret){
+    if (ret.ret == 'success') {
+     notify(ret.data, 'success');
+    }
+    else {
+      notify(ret.data, 'warning');
+    }
+    globalRequestSearch(current_page, false);
+  });
+});
+
+
+$("body").on('click', '#previe_mail_btn', function(e){                                                                                                                                                                             
+  e.preventDefault();
+  mail_id = $(this).data('id');
+  globalSendCommand('preview_mail', mail_id, null, null, function(ret) {
+    if (ret.ret == 'success')  {
+      console.log(ret.data.title);
+      console.log(ret.data.body);
+      document.getElementById("mail_preview_title").textContent = '제목: '+ret.data.title
+      document.getElementById("html_preview").innerHTML = ret.data.body;
+      $("#preview_modal").modal();
+    } else {
+      notify(ret.data, 'warning');
+    }
+  });
+});
+
+
+</script>    
+{% endblock %}

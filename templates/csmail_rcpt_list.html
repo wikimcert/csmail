@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% block content %}
+
+{{ macros.m_row_start('0') }}
+{{ macros.m_row_end() }}
+<div>
+  <form id="form_search" name="from_search" class="form-inline" style="text-align:left">
+    <div class="container-fluid">
+      <div class="row show-grid">
+        <span class="col-md-12">
+          {{ macros.m_button_group([['register_rcptlist_modal_btn', '훈련대상그룹등록']]) }}
+	      <input id="keyword" name="keyword" class="form-control form-control-sm w-75" type="text" placeholder="제목입력" aria-label="Search">
+          {{ macros.m_button_group([['search', '검색'], ['reset_btn', '리셋']]) }}
+        </span>
+      </div>
+    </div>
+  </form>
+  <div id='page1'></div>
+  {{ macros.m_hr_head_top() }}
+  {{ macros.m_row_start('0') }}
+  {{ macros.m_col(1,  macros.m_strong('ID')) }}
+  {{ macros.m_col(2,  macros.m_strong('등록시각')) }}
+  {{ macros.m_col(3,  macros.m_strong('제목')) }}
+  {{ macros.m_col(3,  macros.m_strong('건수')) }}
+  {{ macros.m_col(3,  macros.m_strong('기능')) }}
+  {{ macros.m_row_end() }}
+  {{ macros.m_hr_head_bottom() }}
+  <div id="list_div"></div>
+  <div id='page2'></div>
+</div>
+
+<div class="modal fade" id="register_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="modal_title">신규 수신자그룹 등록</h4>
+      </div>
+      <div class="modal-body" id="modal_body" style="word-break:break-all;">
+	<form id="register_form" name="register_form">
+      {{ macros.setting_input_text('name', '수신자목록이름') }}
+      {% if arg['user_db_use'] == 'True' %}
+        {{ macros.setting_buttons([['get_user_list_btn', '수신자목록 가져오기']], left='수신자목록 가져오기', desc='사용자정보 DB를 연동해 수신자 목록을 가져옴') }}
+      {% else %}
+        {{ macros.setting_input_text_and_buttons('upload_file_path', '수신자목록업로드', [['browse_btn', '파일선택'],['sample_down_btn', '샘플파일']], desc='사용자 정보파일 업로드, 양식은 샘플파일 다운로드') }}
+        <input type="file" id="upload_file" name="upload_file" value="" style="display:none;" accept=".xls, .xlsx"/>
+      {% endif %}
+      {{ macros.setting_checkbox('empty_list', '빈그룹등록', value='false', desc='On: 빈그룹으로 등록, 수신자목록에서 해당그룹에 수신자 추가') }}
+      {{ macros.setting_input_textarea('except_dept_names', '제외부서목록', value=arg['except_dept_names'], desc='등록시 제외할 부서명') }}
+	  {{ macros.info_text('total_user_count', '조회된 사용자 수')}}
+      <input type="hidden" id="empty_list" name="empty_list" value="True">
+	</form>
+      </div>
+      <div class="modal-footer" style="align-items:right;">
+          <button type="button" id="register_rcptlist_btn" class="btn btn-default">등록</button>
+          <button type="button" class="btn btn-default" data-dismiss="modal">닫기</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div>
+ <form id="send_form" name="send_form" action="/csmail/rcpt/each" method="POST">
+  <input type="hidden" id="rcptlist_id" name="rcptlist_id">
+</form>
+<!-- Modal: 룰 등록 END -->
+
+<script type="text/javascript">
+var current_data = null;
+var current_page = 1;
+var current_rule = null;
+var formData = null;
+var rcptlist = null;
+var use_db = "{{arg['user_db_use']}}"
+
+$(document).ready(function(){
+  request_search('1', true);
+});
+
+//토렌트 파일 선택 버튼
+$("body").on("click", "#browse_btn", function(e){
+    e.preventDefault();
+    $("#upload_file").click();
+});
+
+$("#upload_file").change(function(e){
+  e.preventDefault();
+  filedata = upload_file.files[0];
+  $("#register_form").attr("enctype", "multipart/form-data");
+  let fileForm = new FormData(document.getElementById("register_form"));
+  $("#upload_file_path").val(filedata.name);
+  var url = '/' + PACKAGE_NAME + '/ajax/' + MODULE_NAME + '/' + PAGE_NAME +'/upload_user_list';
+  console.log(url);
+  $.ajax({
+    url: url,
+    type: "POST",
+    cache: false,
+    data: fileForm,
+    contentType: false,
+    processData: false,
+    dataType: "json",
+    success: function (ret) {
+      if (ret.ret == 'success') {
+        strcnt = ret.data.length + '명 조회됨';
+        console.log(strcnt)
+        document.getElementById('total_user_count').innerHTML = strcnt;
+      }
+      else {
+        notify(ret.data, 'warning');
+      }
+      console.log(ret);
+    }
+  });
+  return;
+});
+
+$("body").on('click', '#page', function(e){
+  e.preventDefault();
+  var page = $(this).data('page')
+  request_search(page, true);
+});
+
+$("#search").click(function(e) {
+  e.preventDefault();
+  request_search('1', true);
+});
+
+$("#reset_btn").click(function(e) {
+  e.preventDefault();
+  $("#keyword").val('');
+  request_search('1', false);
+});
+
+$("#reset_btn").click(function(e) {
+  e.preventDefault();
+  document.getElementById("search_word").value = '';
+  request_search(current_page, true);
+});
+
+function request_search(page, move_top=false) {
+  formData = getFormdata('#form_search');
+  globalSendCommandPage('web_list', formData, null, null, function(data) {
+    if (move_top) window.scrollTo(0,0);
+    make_list(data.list)
+    make_page_html(data.paging)
+  });
+}
+
+function make_list(data) {
+  var str = "";
+  current_data = data;
+  console.log(data);
+  console.log(data.length);
+  if (data.length == 0) {
+    str += "<h3>등록된 수신자 그룹이 없습니다.</h3>";
+    document.getElementById("list_div").innerHTML = str;
+    return;
+  }
+  for (i in data) {
+    str += j_row_start();
+    tmp = data[i].id;
+    str += j_col(1, tmp)
+    tmp = data[i].created_time;
+    str += j_col(2, tmp)
+
+    tmp = '<strong>'+data[i].name+'</strong>';
+    str += j_col(3, tmp);
+
+    tmp = '<strong>전체: '+data[i].total_count+' 건</strong>';
+    tmp += '(대상: '+data[i].target_count+' 건/';
+    tmp += '제외: '+data[i].except_count+' 건)';
+    str += j_col(3, tmp);
+
+    btn_str = j_button_tt('view_rcptlist_btn', '목록보기', [{'key':'id', 'value':data[i].id }], 'success', tooltip='수신자목록을 확인합니다.', pos='up-left');
+    btn_str += j_button_tt('refresh_rcptlist_btn', '건수확인', [{'key':'id', 'value':data[i].id }], 'info', tooltip='수신자목록에서 대상/제외건수를 확인하여 갱신합니다.', pos='up');
+    btn_str += j_button_tt('remove_rcptlist_btn', '목록삭제', [{'key':'id', 'value':data[i].id }], 'danger', tooltip='수신자목록과 등록된 주소를 삭제합니다.', pos='up-right');
+    tmp = j_button_group(btn_str)
+    str += j_col(3, tmp);
+    str += j_row_end();
+
+    if (i != data.length -1) {str += j_hr();}
+  }
+  document.getElementById("list_div").innerHTML = str;
+}
+
+$("body").on('click', '#view_rcptlist_btn', function(e){
+  e.preventDefault();
+  var rcptlist_id = $(this).data('id');
+  $("#rcptlist_id").val(rcptlist_id);
+  $("#send_form").submit();
+  //window.location.replace('/csmail/rcpt/each?rcptlist_id='+rcptlist_id);
+});
+
+$("body").on('click', '#refresh_rcptlist_btn', function(e){
+  e.preventDefault();
+  var rcptlist_id = $(this).data('id');
+  globalSendCommandPage('refresh_rcptlist', rcptlist_id, null, null, function(ret) {
+    if (ret.ret == 'success') {
+      request_search(current_page, false);
+      notify(ret.data, 'success');
+    }
+    else {
+      notify(ret.data, 'warning');
+    }
+  });
+});
+
+
+
+
+
+$("body").on('click', '#register_rcptlist_btn', function(e){
+  e.preventDefault();
+  var formData = getFormdata('#register_form');
+  const params = new URLSearchParams(formData);
+  if (params.get('name') == '') {
+    alert('수신자목록 이름을 입력해주세요');
+    document.getElementById('name').focus();
+    return;
+  }
+  globalSendCommandPage('register_rcptlist', formData, null, null, function(ret) {
+    if (ret.ret == 'success') {
+      $("#register_modal").modal('hide');
+      request_search(current_page, false);
+      notify(ret.data, 'success');
+    }
+    else {
+      notify(ret.data, 'warning');
+    }
+  });
+});
+
+$("body").on('click', '#remove_rcptlist_btn', function(e){
+  e.preventDefault();
+  var rcptlist_id = $(this).data('id');
+  globalConfirmModal('대상자목록삭제', '훈련대상자 목록과 포함된 대상자를 삭제하시겠습니까?', function() {
+    globalSendCommandPage('remove_rcptlist', rcptlist_id, null, null, function(ret){
+      if (ret.ret == 'success') {
+        request_search(current_page, move_top=false);
+      } else {
+        notify(ret.data, 'warning');
+      }
+    });
+  });
+});
+
+$("body").on('click', '#register_rcptlist_modal_btn', function(e) {
+  e.preventDefault();
+  rcptlist = null;
+  $("#register_modal").modal();
+});
+
+$("body").on('click', '#get_user_list_btn', function(e){
+  e.preventDefault();
+  document.getElementById("empty_list").value = 'False';
+  except_depts = document.getElementById("except_dept_names").value;
+  console.log(except_depts);
+  globalSendCommandPage('get_user_list', except_depts, null, null, function(ret) {
+    if (ret.ret == 'success') {
+      strcnt = ret.data.length + '명 조회됨';
+      console.log(strcnt)
+      //$('#total_user_count').val(strcnt);
+      document.getElementById('total_user_count').innerHTML = strcnt;
+    }
+    else {
+      notify(ret.data, 'warning');
+    }
+  });
+});
+
+$("body").on('click', '#sample_down_btn', function(e){
+  e.preventDefault();
+  window.location.href = "/download_sample";
+});
+
+function j_button_tt(id, text, data, outline_color, tooltip='', pos='down', size='medium') {
+  var str = '<button id="'+id+'" name="'+id+'" class="btn btn-sm btn-outline-'+outline_color+'" '
+  if (tooltip == '') str += ' aria-label="' +text+'"';
+  else str += ' aria-label="' +tooltip+'"';
+  str += ' data-balloon-pos="' +pos+ '" data-balloon-length="'+size+'"';
+  for ( var i in data) {
+    str += ' data-' + data[i].key + '="' + data[i].value+ '" '
+  }
+  str += '>' + text + '</button>';
+  return str;
+}
+
+</script>    
+{% endblock %}

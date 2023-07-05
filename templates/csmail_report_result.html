@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+{% block content %}
+
+{{ macros.m_row_start('0') }}
+{{ macros.m_row_end() }}
+<div>
+  <form id="form_search" name="from_search" class="form-inline" style="text-align:left">
+    <div class="container-fluid">
+      <div class="row show-grid">
+        <span class="col-md-12">
+          <select name="option1" id="option1" class="form-control form-control-sm">
+          </select>
+          <select name="option2" id="option2" class="form-control form-control-sm">
+            <option value="all">전체부서</option>
+          </select>
+	      <input id="keyword" name="keyword" class="form-control form-control-sm w-50" type="text" placeholder="제목입력" aria-label="Search">
+          {{ macros.m_button_group([['globalSearchSearchBtn', '검색'], ['globalSearchResetBtn', '리셋']]) }}
+          <!--
+          <button id="report_status_btn" name="report_status_btn" class="btn btn-sm btn-outline-warning" aria-label="메일시스템에 신고내역을 조회해 상태를 갱신함" data-balloon-pos="up" data-balloon-length="medium">신고내역확인</button> //-->
+        </span>
+      </div>
+    </div>
+  </form>
+  <div id='page1'></div>
+  {{ macros.m_hr_head_top() }}
+  {{ macros.m_row_start('0') }}
+  {{ macros.m_col(1,  macros.m_strong('ID')) }}
+  {{ macros.m_col(3,  macros.m_strong('확인시각')) }}
+  {{ macros.m_col(3,  macros.m_strong('부서/이름/사번/메일')) }}
+  {{ macros.m_col(1,  macros.m_strong('상태')) }}
+  {{ macros.m_col(2,  macros.m_strong('기능')) }}
+  {{ macros.m_row_end() }}
+  {{ macros.m_hr_head_bottom()}}
+  <div id="list_div"></div>
+  <div id='page2'></div>
+</div>
+
+<script type="text/javascript">
+var package_name = "{{arg['package_name'] }}";
+var sub = "{{arg['sub']}}";
+var current_data = null;
+var current_page = 1;
+var current_rule = null;
+var formData = null;
+var rcptlist = {{rcptlist|tojson}}
+var deptlist = {{deptlist|tojson}}
+var traininglist = {{traininglist|tojson}}
+var start_training_id = "{{arg['start_training_id']}}"
+
+$(document).ready(function(){
+  console.log('rcptlist:'+rcptlist);
+  console.log('start_training_id:'+start_training_id);
+  set_option1();
+  set_option2();
+  globalRequestSearch('1');
+});
+
+function set_option1() {
+  form_search.option1.options[0] = new Option('전체훈련', 'all');
+  for (var i = 0; i < traininglist.length; i++) {
+    form_search.option1.options[i+1] = new Option(traininglist[i].name, traininglist[i].id);
+    if (start_training_id != '') {
+      if (start_training_id == traininglist[i].id) form_search.option1.options[i+1].selected = true;
+    }
+  }
+}
+
+function set_option2() {
+  form_search.option2.options[0] = new Option('전체부서', 'all');
+  for (var i = 0; i < deptlist.length; i++) {
+    form_search.option2.options[i+1] = new Option(deptlist[i], deptlist[i]);
+  }
+}
+
+$("body").on('click', '#modal_hide_btn', function(e){
+  e.preventDefault();
+  $('#register_modal').modal('hide');
+});
+
+$("body").on('click', '#m_modal_hide_btn', function(e){
+  e.preventDefault();
+  $('#modify_modal').modal('hide');
+});
+
+function get_rcpt(rcpt_id) {
+  for (var i=0;i < rcptlist.length;i++) {
+    if (rcptlist[i].id == rcpt_id)
+        return rcptlist[i];
+  }
+  return null;
+}
+
+function get_training(training_id) {
+  for (var data in traininglist) {
+    if (data[i].id == training_id)
+        return data[i];
+  }
+  return null;
+}
+
+function make_list(data) {
+  var str = "";
+  if (data.length == 0) {
+    str += "<h3>등록된 결과가 없습니다.</h3>";
+    document.getElementById("list_div").innerHTML = str;
+    return;
+  }
+  for (i in data) {
+    str += j_row_start();
+    str += j_col(1, data[i].id)
+
+    //tmp = '생성: '+data[i].created_time + '<br>';
+    tmp = '발송: '+data[i].sent_time + '<br>';
+    tmp += '읽음: '+data[i].read_time + '<br>';
+    tmp += '감염: '+data[i].click_time + '<br>';
+    tmp += '신고: '+data[i].report_time + '<br>';
+    str += j_col(3, tmp);
+
+    console.log('ID:'+data[i].rcpt_id);
+    var rcpt = get_rcpt(data[i].rcpt_id);
+    tmp = '<strong>'+rcpt.name+'('+rcpt.emp_code+')</strong><br>';
+    tmp += rcpt.dept+'<br>';
+    tmp += rcpt.email;
+    str += j_col(3, tmp);
+
+    if (data[i].status == "sent") {
+      tmp = '메일발송';
+    } else if (data[i].status == "read") {
+      tmp = '메일읽음';
+    } else if (data[i].status == "infect") {
+      tmp = '링크클릭';
+    } else if (data[i].status == "report") {
+      tmp = '신고완료';
+    } else {
+      tmp = '-';
+    }
+    str += j_col(1, tmp);
+
+    btn_str = j_button_tt('globalJsonBtn', '세부내용', [{'key':'idx', 'value':i }], 'info', tooltip='훈련대상자 세부정보 조회', pos='up-left');
+    btn_str += j_button_tt('resend_btn', '재발송', [{'key':'idx', 'value':i }], 'warning', tooltip='대상에게 훈련메일 재발송, 확인시각 초기화됨', pos='up-left');
+    tmp = j_button_group(btn_str)
+    str += j_col(2, tmp);
+    str += j_row_end();
+  }
+  document.getElementById("list_div").innerHTML = str;
+}
+
+$("body").on('click', '#view_rcptlist_btn', function(e){
+  e.preventDefault();
+  rcptlist_id = $(this).data('id');
+  window.location.replace('/csmail/rcpt/each?rcptlist_id='+rcptlist_id);
+});
+
+
+
+$("body").on('click', '#register_btn', function(e){
+  e.preventDefault();
+  var formData = getFormdata('#register_form');
+  const params = new URLSearchParams(formData);
+  if (params.get('name') == '') {
+    alert('훈련명을 입력해주세요');
+    document.getElementById('name').focus();
+    return;
+  }
+  if (params.get('sender_name') == '') {
+    alert('발신자명 이름을 입력해주세요');
+    document.getElementById('name').focus();
+    return;
+  }
+  if (params.get('sender_email') == '') {
+    alert('발신자 메일주소를 입력해주세요');
+    document.getElementById('name').focus();
+    return;
+  }
+  globalSendCommand('register_training', formData, null, null, function(ret) {
+    if (ret.ret == 'success') {
+      $("#register_modal").modal('hide');
+      globalRequestSearch(current_page, move_top=false);
+      notify(ret.data, 'success');
+    }
+    else {
+      notify(ret.data, 'warning');
+    }
+  });
+});
+
+$("body").on('click', '#training_modify_btn', function(e){
+  e.preventDefault();
+  var formData = getFormdata('#modify_form');
+  globalSendCommand('modify_training', formData, null, null, function(ret){
+    if (ret.ret == 'success') {
+      $('#modify_modal').modal('hide');
+      globalRequestSearch(current_page, move_top=false);
+    }
+    else {
+      notify(ret.data, 'warning');
+    }
+  });
+});
+
+$("body").on('click', '#remove_rcptlist_btn', function(e){
+  e.preventDefault();
+  var rcptlist_id = $(this).data('id');
+  globalConfirmModal('대상자목록삭제', '훈련대상자 목록과 포함된 대상자를 삭제하시겠습니까?', function() {
+    globalSendCommandPage('remove_rcptlist', rcptlist_id, null, null, function(ret){
+      if (ret.ret == 'success') {
+        globalRequestSearch(current_page, move_top=false);
+      } else {
+        notify(ret.data, 'warning');
+      }
+    });
+  });
+});
+
+$("body").on('click', '#check_rpath_btn,#check_tpath_btn,#check_mrpath_btn,#check_mtpath_btn', function(e){
+  e.preventDefault();
+  var ftype = '';
+  btn_id = $(this).attr('id');
+  if (btn_id == "check_rpath_btn") {
+    folder_id = document.getElementById("root_folder_id").value;
+    ftype = "root_folder_id";
+  } else if (btn_id == "check_tpath_btn") {
+    folder_id = document.getElementById("target_folder_id").value;
+    ftype = "target_folder_id";
+  } else if (btn_id == "check_mrpath_btn") {
+    folder_id = document.getElementById("curr_root_folder_id").value;
+    ftype = "root_mfolder_id";
+  } else {
+    folder_id = document.getElementById("curr_target_folder_id").value;
+    ftype = "target_mfolder_id";
+  }
+  if (folder_id.length < 30) {
+    $.notify('<strong>잘못된 folder_id 입니다. </strong>', {type: 'warning'});
+    return
+  }
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/get_gdrive_path',
+    type: "POST",
+    cache: false,
+    data: {folder_id:folder_id},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        if (ftype == 'root_folder_id') {
+	  document.getElementById('root_full_path').innerHTML = data.data;
+	} else if (ftype == 'target_folder_id') {
+	  document.getElementById('target_full_path').innerHTML = data.data;
+	} else if (ftype == 'root_mfolder_id') {
+	  document.getElementById('curr_root_full_path').innerHTML = data.data;
+	} else {
+	  document.getElementById('curr_target_full_path').innerHTML = data.data;
+        }
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+    }
+  });
+});
+
+$("body").on('click', '#register_modal_btn', function(e) {
+  e.preventDefault();
+  for (var i = 0; i < rcptlist.length; i++) {
+    register_form.rcptlist_id.options[i] = new Option(rcptlist[i].name, rcptlist[i].id);
+  }
+  for (var i = 0; i < maillist.length; i++) {
+    register_form.mail_id.options[i] = new Option(maillist[i].name,maillist[i].id);
+  }
+  $("#register_modal").modal();
+});
+
+$("body").on('click', '#modify_modal_btn', function(e) {
+  e.preventDefault();
+  var idx = $(this).data('idx');
+  var tr = current_data.list[idx];
+  $('#training_id').val(tr.id);
+  $('#m_name').val(tr.name);
+  $('#m_sender_name').val(tr.sender_name);
+  $('#m_sender_email').val(tr.sender_email);
+  for (var i = 0; i < rcptlist.length; i++) {
+    modify_form.m_rcptlist_id.options[i] = new Option(rcptlist[i].name, rcptlist[i].id);
+    if (rcptlist[i].id == tr.rcptlist_id) modify_form.m_rcptlist_id.options[i].selected = true;
+  }
+  for (var i = 0; i < maillist.length; i++) {
+    modify_form.m_mail_id.options[i] = new Option(maillist[i].name,maillist[i].id);
+    if (maillist[i].id == tr.mail_id) modify_form.m_mail_id.options[i].selected = true;
+  }
+  $("#modify_modal").modal();
+});
+
+$("body").on('click', '#test_training_btn', function(e) {
+  var training_id = $(this).data('id');
+  globalConfirmModal('테스트발송', default_rcpt+'에게 훈련메일을 테스트발송하시겠습니까?', function() {
+    globalSendCommand('test_training', training_id, null, null, function(ret){
+      if (ret.ret == 'success') {
+        command_modal_show('훈련 테스트 메일 발송');
+      } else {
+        notify(ret.data, 'warning');
+      }
+    });
+  });
+  e.preventDefault();
+});
+
+$("body").on('click', '#resend_btn', function(e){
+  e.preventDefault();
+  var idx = $(this).data('idx');
+  var result_id = current_data.list[idx].id;
+  globalConfirmModal('훈련메일 재발송', '훈련대상자에게 메일을 재발송 하시겠습니까?<br>대상자의 훈련결과 정보가 초기화됩니다.', function() {
+    globalSendCommand('resend_mail', result_id, null, null, function(ret){
+      if (ret.ret == 'success') {
+        globalRequestSearch(current_page, move_top=false);
+        command_modal_show('훈련 테스트 메일재발송');
+      } else {
+        notify(ret.data, 'warning');
+      }
+    });
+  });
+});
+
+$("body").on('click', '#report_status_btn', function(e){
+  e.preventDefault();
+  var formData = getFormdata('#modify_form');
+  globalSendCommand('get_report_status', formData, null, null, function(ret){
+    if (ret.ret == 'success') {
+      globalRequestSearch(current_page, move_top=false);
+    }
+    else {
+      notify(ret.data, 'warning');
+    }
+  });
+});
+
+
+function j_button_tt(id, text, data, outline_color, tooltip='', pos='down', size='medium') {
+  var str = '<button id="'+id+'" name="'+id+'" class="btn btn-sm btn-outline-'+outline_color+'" '
+  if (tooltip == '') str += ' aria-label="' +text+'"';
+  else str += ' aria-label="' +tooltip+'"';
+  str += ' data-balloon-pos="' +pos+ '" data-balloon-length="'+size+'"';
+  for ( var i in data) {
+    str += ' data-' + data[i].key + '="' + data[i].value+ '" '
+  }
+  str += '>' + text + '</button>';
+  return str;
+}
+
+</script>    
+{% endblock %}

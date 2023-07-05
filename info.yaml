@@ -1,0 +1,7 @@
+title: "악성메일대응훈련"
+version: "1.0.0"
+package_name: "csmail"
+developer: "orial"
+description: "악성메일대응 모의훈련 플러그인"
+home: "https://github.com/byorial/csmail"
+more: "https://raw.githubusercontent.com/byorial/csmail/main/README.md"

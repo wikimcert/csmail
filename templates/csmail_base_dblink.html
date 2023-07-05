@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div>
+  {{ macros.m_button_group([['globalSettingSaveBtn', '설정 저장']])}}
+  {{ macros.m_row_start('5') }}
+  {{ macros.m_row_end() }}
+  <nav>
+    {{ macros.m_tab_head_start() }}
+      {{ macros.m_tab_head('userdb', '사용자DB', true) }}
+      {{ macros.m_tab_head('maildb', '메일시스템DB', false) }}
+    {{ macros.m_tab_head_end() }}
+  </nav>
+  <form id='setting' name='setting'>
+  <div class="tab-content" id="nav-tabContent">
+   {{ macros.m_tab_content_start('userdb', true) }}
+    {{ macros.setting_checkbox('user_db_use', 'DB연동사용', value=arg['user_db_use'], desc=['수신자목록 등록시 사용자DB를 연동','On: DB연동, Off: 파일등록']) }}
+    {{ macros.setting_select_and_buttons('user_db_type', 'DB유형', [['oracle','oracle'],['mysql','mysql'],['mssql','mssql']], [['check_pkg_btn', '설치확인']],value=arg['user_db_type'], desc=['연동할 DB 유형, 지원DB: oracle, mysql, mssql']) }}
+    {{ macros.setting_input_text('user_db_server_addr', 'DB서버 주소', value=arg['user_db_server_addr'], desc=['ip:port, ex) 127.0.0.1:1521']) }}
+    {{ macros.setting_input_text('user_db_user_id', 'DB 계정', value=arg['user_db_user_id'], desc=['사용자계정ID']) }}
+    {{ macros.setting_input_text_and_buttons('user_db_password', 'DB 암호', [['user_db_test_btn', '접속확인']], value=arg['user_db_password'], type='password', desc=['암호']) }}
+    {{ macros.setting_input_text('user_db_service_name', 'DB명(서비스명)', value=arg['user_db_service_name'], desc=['데이터베이스 이름/서비스명']) }}
+    {{ macros.setting_input_textarea('user_db_query_str', '사용자 조회쿼리', row=4, value=arg['user_db_query_str'], desc=['조회시 인자 순서를 지켜야함, 사번,성명,부서명,메일주소 순서','예: select emp_code, name, dept, email from user_table where 조건']) }}
+    {{ macros.setting_buttons([['user_db_query_test_btn', '테스트']], left='쿼리테스트', desc=None) }}
+    {{ macros.setting_input_text('except_dept_names', '수신자등록시 제외부서', value=arg['except_dept_names'], desc=['수신자목록 등록시 제외할 부서명, 여러개입력시 구분자는 쉼표(,)']) }}
+   {{ macros.m_tab_content_end() }}
+   {{ macros.m_tab_content_start('maildb', false) }}
+    {{ macros.setting_checkbox('mail_db_use', 'DB연동사용', value=arg['mail_db_use'], desc=['수신자목록 등록시 사용자DB를 연동']) }}
+    {{ macros.setting_select_and_buttons('mail_db_type', 'DB유형', [['oracle','oracle'],['mysql','mysql'],['mssql','mssql']],[['check_pkg_btn2', '설치확인']], value=arg['mail_db_type'], desc=['연동할 DB 유형, 지원DB: oracle, mysql, mssql']) }}
+    {{ macros.setting_input_text('mail_db_server_addr', 'DB서버 주소', value=arg['mail_db_server_addr'], desc=['ip:port, ex) 127.0.0.1:1521']) }}
+    {{ macros.setting_input_text('mail_db_user_id', 'DB 계정', value=arg['mail_db_user_id'], desc=['사용자계정ID']) }}
+    {{ macros.setting_input_text_and_buttons('mail_db_password', 'DB 암호', [['mail_db_test_btn', '접속확인']], value=arg['mail_db_password'], type='password', desc=['암호']) }}
+    {{ macros.setting_input_text('mail_db_service_name', 'DB명(서비스명)', value=arg['mail_db_service_name'], desc=['데이터베이스 이름/서비스명']) }}
+    {{ macros.setting_input_textarea('mail_db_query_str', '신고메일조회쿼리(목록)', row=4, value=arg['mail_db_query_str'], desc=['메일시스템에 신고DB 테이블 조회 쿼리','예약어: 발신시각-{sent_time}, 발신자메일주소: {sender}, 발신IP: {sender_ip}, 제목: {title}']) }}
+    {{ macros.info_text('mail_db_query_desc', '쿼리작성시주의사항', value='SELECT 쿼리에 첫번째 항목은 수신자email주소, 두번째항목 신고시각(datetime유형) 고정', desc=['ex) SELECT toaddr, report_time FROM 악성메일신고DB wher 조건문 형태','조건문은 훈련메일을 신고메일만 조회할 수 있는 형태로 작성해야함','{title}은 메일등록시 사용한 쿼리용 제목이 사용됨']) }}
+    {{ macros.setting_buttons([['mail_db_query_test_btn', '테스트']], left='쿼리테스트', desc=None) }}
+   {{ macros.m_tab_content_end() }}
+  </form>
+</div> <!--전체-->
+
+
+
+<script type="text/javascript">
+var package_name = "{{arg['package_name'] }}";
+var sub = "{{arg['sub'] }}";
+var user_db_use = "{{arg['user_db_use']}}"
+
+$(document).ready(function(){
+});
+
+$("body").on('click', '#user_db_test_btn', function(e){
+  e.preventDefault();
+  var formData = getFormdata('#setting');
+  globalSendCommandPage('user_db_test', formData, null, null, function(ret){
+    notify(ret.data, 'info');
+  });
+});
+
+$("body").on('click', '#mail_db_test_btn', function(e){
+  e.preventDefault();
+  var formData = getFormdata('#setting');
+  globalSendCommandPage('mail_db_test', formData, null, null, function(ret){
+    notify(ret.data, 'info');
+  });
+});
+
+$("body").on('click', '#user_db_query_test_btn', function(e){
+  e.preventDefault();
+  var formData = getFormdata('#setting');
+  globalSendCommandPage('user_db_query_test', formData, null, null, function(ret){
+    if (ret.ret == 'success') {
+      var num = ret.data.length;
+      notify('DB쿼리성공: '+num+'명의 사용자 조회됨', 'info');
+    } else {
+      notify(ret.data, 'warning');
+    }
+  });
+});
+
+$("body").on('click', '#mail_db_query_test_btn', function(e){
+  e.preventDefault();
+  var formData = getFormdata('#setting');
+  globalSendCommandPage('mail_db_query_test', formData, null, null, function(ret){
+    if (ret.ret == 'success') {
+      var num = ret.data.length;
+      notify('DB쿼리성공: '+num+'건의 신고내역 조회됨', 'info');
+    } else {
+      notify(ret.data, 'warning');
+    }
+  });
+});
+
+$("body").on('click', '#check_pkg_btn, #check_pkg_btn2', function(e){
+  e.preventDefault();
+  var btn_id = $(this).attr('id');
+  if (btn_id == "check_pkg_btn") {
+    db_type = document.getElementById('user_db_type').value;
+  } else {
+    db_type = document.getElementById('mail_db_type').value;
+  }
+  globalSendCommandPage('check_pkg', db_type, null, null, function(ret){
+    if (ret.ret == 'success') {
+      notify(ret.data, 'success');
+    } else {
+      notify(ret.data, 'warning');
+    }
+  });
+});
+
+
+</script>    
+{% endblock %}

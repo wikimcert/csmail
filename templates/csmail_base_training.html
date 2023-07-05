@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div>
+  {{ macros.m_button_group([['globalSettingSaveBtn', '설정 저장']])}}
+  {{ macros.m_row_start('5') }}
+  {{ macros.m_row_end() }}
+  <nav>
+    {{ macros.m_tab_head_start() }}
+      {{ macros.m_tab_head('basic', '훈련기본설정', true) }}
+      {{ macros.m_tab_head('template', '훈련화면설정', false) }}
+    {{ macros.m_tab_head_end() }}
+  </nav>
+  <form id='setting' name='setting'>
+  <div class="tab-content" id="nav-tabContent">
+  {{ macros.m_tab_content_start('basic', true) }}
+   {{ macros.setting_input_text('org_name', '회사/기관명', value=arg['org_name'], desc=['안내페이지 상단에 표시할 회사/기관명칭']) }}
+    {{ macros.setting_input_text('test_default_name', '기본설정-이름', value=arg['test_default_name'], desc=['이름']) }}
+    {{ macros.setting_input_text('test_default_dept', '기본설정-부서', value=arg['test_default_dept'], desc=['부서']) }}
+    {{ macros.setting_input_text('test_default_mail', '기본설정-메일주소', value=arg['test_default_mail'], desc=['메일주소']) }}
+    {{ macros.setting_input_text('test_default_emp_code', '기본설정-사번', value=arg['test_default_emp_code'], desc=['사번']) }}
+    {{ macros.setting_input_text('admin_ips', '관리자IP', value=arg['admin_ips'], desc=['관리자IP주소, 여러개입력시 구분자(|)','읽음확인 및 신고처리 예외를 위해 사용함']) }}
+  {{ macros.m_tab_content_end() }}
+  {{ macros.m_tab_content_start('template', false) }}
+   {{ macros.setting_input_text_and_buttons('infect_template_path', '감염화면설정', [['path_infect_template_btn', '파일선택'],['globalEditBtn', '편집하기', [['file', arg['infect_template_path']]]],['preview_infect_template', '미리보기']], value=arg['infect_template_path'], desc=['훈련메일 클릭시 화면 설정하기']) }}
+   {{ macros.setting_input_text_and_buttons('report_template_path', '신고화면설정', [['path_report_template_btn', '파일선택'],['globalEditBtn', '편집하기', [['file', arg['report_template_path']]]],['preview_report_template', '미리보기']], value=arg['report_template_path'], desc=['훈련메일 신고 화면 설정하기']) }}
+   {{ macros.info_text('info_text', '예약어안내', desc=["감염/신고화면에 사용가능한 예약어","{{arg['org_name']}}: 기관명", "{{arg['title']}}: 훈련명", "{{arg['name']}}: 성명","{{arg['emp_code']}}: 사번","{{arg['email']}}: 메일주소"]) }}
+  {{ macros.m_tab_content_end() }}
+  </div>
+  </form>
+</div> <!--전체-->
+
+<!-- 템플릿 미리보기용 모달 --> 
+<div class="modal fade" id="preview_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="preview_title"></h4>
+      </div>
+      <div class="modal-body" id="modal_body" style="word-break:break-all;padding:0.5rem;">
+        <span id="html_preview"></span>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">닫기</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal: END -->
+
+
+<script type="text/javascript">
+$("body").on('click', '#path_infect_template_btn', function(e){ 
+  e.preventDefault();
+  globalSelectLocalFile("업로드 폴더 선택", $('#infect_template_path').val(), function(ret) {
+    $('#infect_template_path').val(ret);
+  });
+});
+
+$("body").on('click', '#path_report_template_btn', function(e){ 
+  e.preventDefault();
+  globalSelectLocalFile("업로드 폴더 선택", $('#report_template_path').val(), function(ret) {
+    $('#report_template_path').val(ret);
+  });
+});
+
+$("body").on('click', '#preview_infect_template,#preview_report_template', function(e){
+  e.preventDefault();
+  var ttype = $(this).attr('id').split('_')[1];
+  globalSendCommandPage('preview_template', ttype, null, null, function(ret) {
+    if (ret.ret == 'success')  {
+      if (ttype == 'infect') {
+        var title = '감염화면 미리보기';
+      } else {
+        var title = '신고화면 미리보기';
+      }
+      document.getElementById("preview_title").textContent = title;
+      document.getElementById("html_preview").innerHTML = ret.data;
+      $("#preview_modal").modal();
+    } else {
+      notify(ret.data, 'warning');
+    }
+  });
+});
+
+
+
+</script>    
+{% endblock %}
