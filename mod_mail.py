@@ -142,11 +142,19 @@ class ModuleMail(PluginModuleBase):
             msg = msg + f'From: {mime["From"]}, To: {mime["To"]}, Date: {mime["Date"]}\n\n'
             socketio.emit(modal, msg, namespace='/framework', broadcast=True)
 
-            s = smtplib.SMTP(ModelSetting.get('smtp_server_addr'), 25)
-            #s.set_debuglevel(1)
+            server_addr = ModelSetting.get('smtp_server_addr')
+            port = 25
+            if server_addr.find(':') != -1:
+                server_addr, port = server_addr.split(':')
+                port = int(port)
+
+            s = smtplib.SMTP()
+            if ModelSetting.get_bool('smtp_set_debug'): s.set_debuglevel(1)
+            s.connect(server_addr, port)
             s.sendmail(tritem.sender_email, rcpt.email, mime.as_string())
             socketio.emit(modal, '메일 발송 완료\n\n', namespace='/framework', broadcast=True)
             s.quit()
+            logger.debug(f'[sendmail] 메일 발송 완료: 수신자({rcpt.email}), 메일제목({mime["subject"]})')
 
             ritem = None
             ritem = ModelResultItem.get_by_rcpt_id_and_training_id(rcpt.id, tritem.id)

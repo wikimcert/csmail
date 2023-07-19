@@ -115,9 +115,9 @@ function make_list(data) {
     str += j_col(2, tmp);
 
     // TODO:
-    tmp = '열람: '+(data[i].read_cnt/data[i].total_cnt*100).toFixed(2)+'%, 신고('+(data[i].report_cnt/data[i].read_cnt*100).toFixed(2)+'%)<br>';
-    tmp += '감염: '+(data[i].infect_cnt/data[i].total_cnt*100).toFixed(2)+'%, 신고('+(data[i].report_cnt/data[i].infect_cnt*100).toFixed(2)+'%)<br>';
-    tmp += '신고: '+(data[i].report_cnt/data[i].total_cnt*100).toFixed(2)+'%, 신고('+(data[i].report_cnt/data[i].infect_cnt*100).toFixed(2)+'%)<br>';
+    tmp = '열람: '+(data[i].read_cnt/data[i].total_cnt*100).toFixed(2)+'%, 신고('+(data[i].report_read_cnt/data[i].read_cnt*100).toFixed(2)+'%)<br>';
+    tmp += '감염: '+(data[i].infect_cnt/data[i].total_cnt*100).toFixed(2)+'%, 신고('+(data[i].report_infect_cnt/data[i].infect_cnt*100).toFixed(2)+'%)<br>';
+    tmp += '신고: '+(data[i].report_cnt/data[i].total_cnt*100).toFixed(2)+'%<br>';
     str += j_col(3, tmp);
 
     btn_str = j_button_tt('view_result_btn', '세부결과', [{'key':'id', 'value':data[i].training_id }], 'info', tooltip='훈련대상자별 세부 결과 조회', pos='up-left');

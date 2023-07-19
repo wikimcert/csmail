@@ -13,10 +13,11 @@
   <form id='setting' name='setting'>
   <div class="tab-content" id="nav-tabContent">
    {{ macros.m_tab_content_start('normal', true) }}
-    {{ macros.setting_input_text_and_buttons('data_path', '데이터저장경로', [['path_select_btn', '폴더선택']], value=arg['data_path'], desc=['데이터파일을 저장할 경로 지정, 하위에 files, mail 폴더 생성후 필요데이터 저장']) }}
+    {{ macros.setting_input_text_and_buttons('data_path', '데이터저장경로', [['path_select_btn', '폴더선택']], value=arg['data_path'], desc=['데이터파일을 저장할 경로 지정, 하위에 files, mail 폴더 생성후 필요데이터 저장', '초기값 그대로 사용하길 추천']) }}
     {{ macros.setting_input_text('host_addr', '호스트IP', value=arg['host_addr'], desc=['메일서버에서 인식하는 훈련시스템 IP주소']) }}
-    {{ macros.setting_input_text('smtp_server_addr', 'SMTP메일서버주소', value=arg['smtp_server_addr'], desc=['SMTP메일서버 주소']) }}
+    {{ macros.setting_input_text('smtp_server_addr', 'SMTP메일서버주소', value=arg['smtp_server_addr'], desc=['SMTP메일서버 주소, IP:PORT 형태(IP만지정한경우 기본포트-25로 적용)','예) 127.0.0.1:25']) }}
     {{ macros.setting_input_int('smtp_send_sleep_time', '메일전송간격', value=arg['smtp_send_sleep_time'], desc=['메일전송 간격, 단위(msec)']) }}
+    {{ macros.setting_checkbox('smtp_set_debug', 'SMTP상세로그보기', value=arg['smtp_set_debug'], desc=['SMTP Transaction에 대한 세부정보 보기(로그)', 'On: 세부정보기록, Off: 기록안함']) }}
     {{ macros.setting_input_int('web_list_limit', '페이지당 목록수', value=arg['web_list_limit'], desc=['한 페이지에 보여줄 아이템 수']) }}
    {{ macros.m_tab_content_end() }}
   </div>

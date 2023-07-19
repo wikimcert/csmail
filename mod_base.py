@@ -17,6 +17,7 @@ class ModuleBase(PluginModuleBase):
             'host_addr': '127.0.0.1',
             'smtp_server_addr': '127.0.0.1',
             'smtp_send_sleep_time': '500',
+            'smtp_set_debug': 'False',
             'web_list_limit': '30',
             'default_rcptlist_json':'[\n{\n  "name":"이름",\n  "dept":"부서명",\n  "emp_code":"사번",\n  "email":"메일주소"\n}\n]',
             # 사용자DB 연동
@@ -44,9 +45,8 @@ class ModuleBase(PluginModuleBase):
             'data_path': f'/data/{__package__}',
             'test_default_name': '나보안',
             'test_default_dept': '정보보안팀',
-            'test_default_mail': 'cert@wikim.re.kr',
-            'test_default_emp_code': '9999',
-            'admin_ips': '',
+            'test_default_mail': 'cert@security.com',
+            'test_default_emp_code': '0000',
         }
         self.web_listmodel = None
         self.set_page_list([PageSetting, PageTraining, PageDBLink])

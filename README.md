@@ -35,3 +35,31 @@
     - 훈련등록/관리/테스트/실행 등 기능 지원(충분히 테스트 후 실행권장)
 - 훈련결과: 훈련결과를 요약정보/세부(개인별)결과/통계 및 보고서 제공
     - 메일DB 연동시 메일시스템의 신고기능을 통해 신고된 메일 정보 반영 기능 지원
+
+#### 4. 설치 및 초기 설정 안내
+- 1. FlaskFarm(FF) 설치(Docker 설치 추천)
+    - 기본포트는 9999 설정을 통해 변경 가능
+    - network 는 브릿지로 사용 가능
+    - OS별 설치 방법 안내(<https://flaskfarm.github.io/posts/%EC%8B%A4%ED%96%89-Docker/>)
+    - 도커 실행 샘플 스크립트
+```bash
+docker run -d \                                                                                                                                                                                                                     
+--name cert \
+--network=host \
+--log-opt max-file=5 \
+--log-opt max-size=10m \
+-v /opt/flaskfarm:/data \
+-v /:/host \
+--privileged \
+flaskfarm/flaskfarm:4.0
+
+```
+- 2. FF접속 및 기본 설정
+    - 실행후 FF 접속(http://ip:9999), 시스템 - 설정 - 인증에서 인증설정(ID/PW) 및 APIKEY설정(사용: On)
+    - 시스템 - 설정 - 기본에서 DDNS 설정
+- 3. 필수 플러그인 설치
+    - 시스템 - 플러그인관리 - 플러그인 설치 주소에 아래 주소 입력하여 설치
+    - 편집기(flaskcode): `https://github.com/flaskfarm/flaskcode`
+    - 악성메일대응훈련(csmail): `https://github.com/wikimcert/csmail`
+- 4. 시스템 재시작
+    - 시스템 - 재시작을 통해 재시작 및 플러그인 로드

@@ -19,7 +19,6 @@
     {{ macros.setting_input_text('test_default_dept', '기본설정-부서', value=arg['test_default_dept'], desc=['부서']) }}
     {{ macros.setting_input_text('test_default_mail', '기본설정-메일주소', value=arg['test_default_mail'], desc=['메일주소']) }}
     {{ macros.setting_input_text('test_default_emp_code', '기본설정-사번', value=arg['test_default_emp_code'], desc=['사번']) }}
-    {{ macros.setting_input_text('admin_ips', '관리자IP', value=arg['admin_ips'], desc=['관리자IP주소, 여러개입력시 구분자(|)','읽음확인 및 신고처리 예외를 위해 사용함']) }}
   {{ macros.m_tab_content_end() }}
   {{ macros.m_tab_content_start('template', false) }}
    {{ macros.setting_input_text_and_buttons('infect_template_path', '감염화면설정', [['path_infect_template_btn', '파일선택'],['globalEditBtn', '편집하기', [['file', arg['infect_template_path']]]],['preview_infect_template', '미리보기']], value=arg['infect_template_path'], desc=['훈련메일 클릭시 화면 설정하기']) }}
