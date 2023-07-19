@@ -36,7 +36,7 @@ class ModuleBase(PluginModuleBase):
             'mail_db_user_id' : 'user',
             'mail_db_password' : 'password',
             'mail_db_service_name' : 'servicename or dbname',
-            'mail_db_query_str' : "SELECT * FROM HACK_REPORT WHERE [조건문]",
+            'mail_db_query_str' : "SELECT TOADDRESS, RECVDATE, SUBJECT, FROMADDR, FROMIP FROM TABLE WHERE [조건문]"
 
             # 훈련
             'org_name': '회사명',
