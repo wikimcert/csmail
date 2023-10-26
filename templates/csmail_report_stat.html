@@ -107,8 +107,8 @@ function make_chart(data) {
     read += data[i].read_cnt;
     infect += data[i].infect_cnt;
     report += data[i].report_cnt;
-    rnr += (data[i].report_read_cnt - read);
-    inr += (data[i].report_infect_cnt - infect);
+    rnr += (read - data[i].report_read_cnt);
+    inr += (infect - data[i].report_infect_cnt);
   }
 
   if (myChart != null) {

@@ -158,7 +158,7 @@ class ModuleReport(PluginModuleBase):
             # 엑셀 기록 하기
             book = xlsxwriter.Workbook(fpath)
             bold = book.add_format({"bold": True})
-            ws1 = book.add_worksheet(f'훈련 결과({title}_{str_today})')
+            ws1 = book.add_worksheet(f'훈련 결과({str_today})')
 
             rows = 0
             for row in contents:

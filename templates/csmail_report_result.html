@@ -13,8 +13,9 @@
           <select name="option2" id="option2" class="form-control form-control-sm">
             <option value="all">전체부서</option>
           </select>
-	      <input id="keyword" name="keyword" class="form-control form-control-sm w-50" type="text" placeholder="제목입력" aria-label="Search">
+	      <input id="keyword" name="keyword" class="form-control form-control-sm w-30" type="text" placeholder="제목입력" aria-label="Search">
           {{ macros.m_button_group([['globalSearchSearchBtn', '검색'], ['globalSearchResetBtn', '리셋']]) }}
+          {{ macros.m_button_group([['read_not_report_btn', '열람미신고'], ['infect_not_report_btn', '감염미신고'], ['view_stat_btn','통계']]) }}
           <!--
           <button id="report_status_btn" name="report_status_btn" class="btn btn-sm btn-outline-warning" aria-label="메일시스템에 신고내역을 조회해 상태를 갱신함" data-balloon-pos="up" data-balloon-length="medium">신고내역확인</button> //-->
         </span>
@@ -331,6 +332,82 @@ $("body").on('click', '#report_status_btn', function(e){
 });
 
 
+$("body").on('click', '#read_not_report_btn', function(e){
+  e.preventDefault();
+  make_list_nr(current_data.list, false);
+});
+
+
+$("body").on('click', '#infect_not_report_btn', function(e){
+  e.preventDefault();
+  make_list_nr(current_data.list, true);
+});
+
+$("body").on('click', '#view_stat_btn', function(e){
+  e.preventDefault();
+  var opt = document.getElementById("option1");
+  window.location.replace('/csmail/report/stat?training_id='+opt.value);
+});
+
+
+
+function make_list_nr(data, infect=false) {
+  var str = "";
+  if (data.length == 0) {
+    str += "<h3>등록된 결과가 없습니다.</h3>";
+    document.getElementById("list_div").innerHTML = str;
+    return;
+  }
+  for (i in data) {
+    if (data[i].report_time != '-') continue; // 신고한경우제외
+    if (data[i].read_time == '-') continue; // 읽지않은 경우 제외
+
+    // 감염미신고
+    if (infect) {
+      if (data[i].click_time == '-') continue;
+    } else {
+      if (data[i].click_time != '-') continue;
+    }
+
+    str += j_row_start();
+    str += j_col(1, data[i].id)
+
+    //tmp = '생성: '+data[i].created_time + '<br>';
+    tmp = '발송: '+data[i].sent_time + '<br>';
+    tmp += '읽음: '+data[i].read_time + '<br>';
+    tmp += '감염: '+data[i].click_time + '<br>';
+    tmp += '신고: '+data[i].report_time + '<br>';
+    str += j_col(3, tmp);
+
+    console.log('ID:'+data[i].rcpt_id);
+    var rcpt = get_rcpt(data[i].rcpt_id);
+    tmp = '<strong>'+rcpt.name+'('+rcpt.emp_code+')</strong><br>';
+    tmp += rcpt.dept+'<br>';
+    tmp += rcpt.email;
+    str += j_col(3, tmp);
+
+    if (data[i].status == "sent") {
+      tmp = '메일발송';
+    } else if (data[i].status == "read") {
+      tmp = '메일읽음';
+    } else if (data[i].status == "infect") {
+      tmp = '링크클릭';
+    } else if (data[i].status == "report") {
+      tmp = '신고완료';
+    } else {
+      tmp = '-';
+    }
+    str += j_col(1, tmp);
+
+    btn_str = j_button_tt('globalJsonBtn', '세부내용', [{'key':'idx', 'value':i }], 'info', tooltip='훈련대상자 세부정보 조회', pos='up-left');
+    btn_str += j_button_tt('resend_btn', '재발송', [{'key':'idx', 'value':i }], 'warning', tooltip='대상에게 훈련메일 재발송, 확인시각 초기화됨', pos='up-left');
+    tmp = j_button_group(btn_str)
+    str += j_col(2, tmp);
+    str += j_row_end();
+  }
+  document.getElementById("list_div").innerHTML = str;
+}
+
 function j_button_tt(id, text, data, outline_color, tooltip='', pos='down', size='medium') {
   var str = '<button id="'+id+'" name="'+id+'" class="btn btn-sm btn-outline-'+outline_color+'" '
   if (tooltip == '') str += ' aria-label="' +text+'"';
@@ -342,6 +419,7 @@ function j_button_tt(id, text, data, outline_color, tooltip='', pos='down', size
   str += '>' + text + '</button>';
   return str;
 }
+
 
 </script>    
 {% endblock %}
