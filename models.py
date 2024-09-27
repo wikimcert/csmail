@@ -326,6 +326,7 @@ class ModelTrainingItem(ModelBase):
     reserved = db.Column(db.JSON)
 
     name = db.Column(db.String)
+    protect = db.Column(db.Boolean)
     sender_name  = db.Column(db.String)
     sender_email = db.Column(db.String)
     rcptlist_id = db.Column(db.Integer)
@@ -334,12 +335,13 @@ class ModelTrainingItem(ModelBase):
     total = db.Column(db.Integer)
     curr = db.Column(db.Integer)
 
-    def __init__(self, name, sender_name, sender_email, rcptlist_id, mail_id, total=0):
+    def __init__(self, name, protect, sender_name, sender_email, rcptlist_id, mail_id, total=0):
         self.created_time = datetime.now()
         self.started_time = None
         self.finished_time = None
         self.updated_time = None
         self.name = name
+        self.protect = True if protect == 'True' else False
         self.sender_name = sender_name
         self.sender_email = sender_email
         self.rcptlist_id = rcptlist_id
@@ -516,6 +518,11 @@ class ModelResultItem(ModelBase):
     def get_all_target_entities(cls):
         query = db.session.query(cls)
         return query.filter(cls.excluded==False).all()
+
+    @classmethod
+    def delete_by_training_id(cls, training_id):
+        db.session.query(cls).filter(cls.training_id==training_id).delete()
+        db.session.commit()
 
     @classmethod
     def web_list(cls, req):

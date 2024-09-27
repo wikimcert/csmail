@@ -28,13 +28,14 @@ class ModuleTraining(PluginModuleBase):
         if command == 'register_training':
             _ = P.logic.arg_to_dict(arg1)
             rcptlist = ModelRcptListItem.get_by_id(int(_['rcptlist_id']))
-            tritem = ModelTrainingItem(_['name'], _['sender_name'], _['sender_email'], int(_['rcptlist_id']), int(_['mail_id']), rcptlist.total_count)
+            tritem = ModelTrainingItem(_['name'], _['protect'], _['sender_name'], _['sender_email'], int(_['rcptlist_id']), int(_['mail_id']), rcptlist.total_count)
             tritem.save()
             ret = {'ret':'success', 'data':f'훈련({tritem.name}) 등록 완료'}
         elif command == 'modify_training':
             _ = P.logic.arg_to_dict(arg1)
             tritem = ModelTrainingItem.get_by_id(int(_['training_id']))
             tritem.name = _['m_name']
+            tritem.protect = True if _['m_protect'] == 'True' else False
             tritem.sender_name = _['m_sender_name']
             tritem.sender_email = _['m_sender_email']
             tritem.rcptlist_id = _['m_rcptlist_id']
@@ -45,6 +46,14 @@ class ModuleTraining(PluginModuleBase):
             tritem.curr = 0
             tritem.save()
             ret = {'ret':'success', 'data':f'훈련정보({tritem.name}) 수정 완료'}
+        elif command == 'remove_training':
+            _ = P.logic.arg_to_dict(arg1)
+            tritem = ModelTrainingItem.get_by_id(int(_['training_id']))
+            ModelResultItem.delete_by_training_id(tritem.id)
+            if not ModelTrainingItem.delete_by_id(tritem.id):
+                ret = {'ret':'failed', 'data':f'수신자목록 삭제 실패'}
+            else:
+                ret = {'ret':'success', 'data':f'훈련정보({tritem.name}) 삭제 완료'}
         elif command == 'test_training':
             req = {'req_type':'test', 'training_id':int(arg1)}
             thread = threading.Thread(target=self.sendmail_thread_function, args=(req,))
@@ -81,12 +90,12 @@ class ModuleTraining(PluginModuleBase):
 
         # 수신자가1명인 경우: 테스트 발송 혹은 재발송의 경우 처리
         if req_type == 'test' or 'rcpt_id' in req:
-            socketio.emit(modal, '0.훈련메일 테스트(재발송) 발송을 시작합니다.\n\n', namespace='/framework', broadcast=True)
+            socketio.emit(modal, '0.훈련메일 테스트(재발송) 발송을 시작합니다.\n\n', namespace='/framework')
             msg = '1. 발송대상 메일: 테스트 발송\n\
               메일이름: {}\n\
               메일제목: {}\n\
               메일경로: {}\n\n'.format(mitem.name, mitem.title, mitem.mail_path)
-            socketio.emit(modal, msg, namespace='/framework', broadcase=True)
+            socketio.emit(modal, msg, namespace='/framework')
 
             if req_type == 'test':
                 name = ModelSetting.get('test_default_name')
@@ -101,7 +110,7 @@ class ModuleTraining(PluginModuleBase):
 
             rcpt.save()
             msg = '2. 수신자 정보: {},{},{},{}\n\n'.format(rcpt.name, rcpt.dept, rcpt.email, rcpt.emp_code)
-            socketio.emit(modal, msg, namespace='/framework', broadcase=True)
+            socketio.emit(modal, msg, namespace='/framework')
 
             is_test = True if req_type == 'test' else False
             ritem = None
@@ -125,12 +134,12 @@ class ModuleTraining(PluginModuleBase):
         # 훈련 실행 처리
         elif req_type == 'training':
             sleep_time = ModelSetting.get_int('smtp_send_sleep_time')/1000
-            socketio.emit(modal, '0.훈련메일 발송을 시작합니다.\n\n', namespace='/framework', broadcast=True)
+            socketio.emit(modal, '0.훈련메일 발송을 시작합니다.\n\n', namespace='/framework')
             msg = '1. 발송대상 메일: 훈련 발송\n\
               메일이름: {}\n\
               메일제목: {}\n\
               메일경로: {}\n\n'.format(mitem.name, mitem.title, mitem.mail_path)
-            socketio.emit(modal, msg, namespace='/framework', broadcase=True)
+            socketio.emit(modal, msg, namespace='/framework')
 
             rcptlist = ModelRcptItem.get_all_target_entities_by_list_id(tritem.rcptlist_id)
             total = len(rcptlist)
@@ -142,11 +151,11 @@ class ModuleTraining(PluginModuleBase):
 
             i = 1
             msg = '2. 훈련대상자 정보 로드: {}명'.format(total)
-            socketio.emit(modal, msg, namespace='/framework', broadcase=True)
+            socketio.emit(modal, msg, namespace='/framework')
             for rcpt in rcptlist:
                 # TODO: 중단/실패된 경우 중간부서 전송할 수 있도록 체크 로직 추가
                 msg = '- {}/{}: {},{},{},{}\n\n'.format(i,total,rcpt.name, rcpt.dept, rcpt.email, rcpt.emp_code)
-                socketio.emit(modal, msg, namespace='/framework', broadcase=True)
+                socketio.emit(modal, msg, namespace='/framework')
 
                 tritem.curr = i
 
@@ -166,7 +175,7 @@ class ModuleTraining(PluginModuleBase):
                     ritem.is_test = False
                 ritem.save()
                 msg = '- 메일데이터 구성 완료\n\n'
-                socketio.emit(modal, msg, namespace='/framework', broadcase=True)
+                socketio.emit(modal, msg, namespace='/framework')
                 mime = self.get_module('mail').set_mime(mail_data, tritem, mitem, rcpt)
                 ret = self.get_module('mail').send_mail(tritem, rcpt, mime)
 

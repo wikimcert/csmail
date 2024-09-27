@@ -38,6 +38,7 @@
       <div class="modal-body" id="modal_body" style="word-break:break-all;">
 	<form id="register_form" name="register_form">
       {{ macros.setting_input_text('name', '훈련명') }}
+      {{ macros.setting_checkbox('protect', '삭제보호', value='on') }}
       {{ macros.setting_input_text('sender_name', '발신자명') }}
       {{ macros.setting_input_text('sender_email', '발신자메일주소') }}
       {{ macros.setting_select('rcptlist_id', '훈련대상자목록') }}
@@ -58,12 +59,13 @@
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h4 class="modal-title" id="modal_title">대상폴더규칙 수정</h4>
+        <h4 class="modal-title" id="modal_title">훈련수정</h4>
       </div>
       <div class="modal-body" id="modal_body" style="word-break:break-all;">
 	<form id="modify_form" name="modify_form">
       <input type="hidden" id="training_id" name="training_id">
       {{ macros.setting_input_text('m_name', '훈련명') }}
+      {{ macros.setting_checkbox('m_protect', '삭제보호') }}
       {{ macros.setting_input_text('m_sender_name', '발신자명') }}
       {{ macros.setting_input_text('m_sender_email', '발신자메일주소') }}
       {{ macros.setting_select('m_rcptlist_id', '훈련대상자목록') }}
@@ -267,12 +269,18 @@ $("body").on('click', '#training_modify_btn', function(e){
   });
 });
 
-$("body").on('click', '#remove_rcptlist_btn', function(e){
+$("body").on('click', '#training_remove_btn', function(e){
   e.preventDefault();
-  var rcptlist_id = $(this).data('id');
-  globalConfirmModal('대상자목록삭제', '훈련대상자 목록과 포함된 대상자를 삭제하시겠습니까?', function() {
-    globalSendCommandPage('remove_rcptlist', rcptlist_id, null, null, function(ret){
+  var protect = document.getElementById('m_protect').value;
+  if (protect == 'on') {
+    alert('삭제보호된 훈련은 삭제할 수 없습니다.\n삭제보호 해제하고 저장한 후 삭제해주세요');
+    return;
+  }
+  var formData = getFormdata('#modify_form');
+  globalConfirmModal('훈련삭제', '훈련삭제시 훈련결과가 함께 삭제됩니다. 삭제하시겠습니까?', function() {
+    globalSendCommand('remove_training', formData, null, null, function(ret){
       if (ret.ret == 'success') {
+        $('#modify_modal').modal('hide');
         globalRequestSearch(current_page, move_top=false);
       } else {
         notify(ret.data, 'warning');
@@ -335,6 +343,7 @@ $("body").on('click', '#register_modal_btn', function(e) {
     register_form.mail_id.options[i] = new Option(maillist[i].name,maillist[i].id);
   }
   $("#register_modal").modal();
+  $('#protect').bootstrapToggle('on');
 });
 
 $("body").on('click', '#modify_modal_btn', function(e) {
@@ -343,6 +352,13 @@ $("body").on('click', '#modify_modal_btn', function(e) {
   var tr = current_data.list[idx];
   $('#training_id').val(tr.id);
   $('#m_name').val(tr.name);
+  if (tr.protect == true) {
+    $('#m_protect').val('on');
+    $('#m_protect').bootstrapToggle('on');
+  } else {
+    $('#m_protect').val('off');
+    $('#m_protect').bootstrapToggle('off');
+  }
   $('#m_sender_name').val(tr.sender_name);
   $('#m_sender_email').val(tr.sender_email);
   for (var i = 0; i < rcptlist.length; i++) {
