@@ -26,7 +26,8 @@ class ModuleRcpt(PluginModuleBase):
         logger.info(f'[{self.name}] process_command: {command}, {arg1}, {req}')
         if command == 'include_rcpt' or command == 'exclude_rcpt':
             rcpt = ModelRcptItem.get_by_id(arg1)
-            rcptlist = ModelRcptListItem.get_by_id(rcpt.id)
+            logger.info(f'[{self.name}] rcpt: {rcpt.id}, {arg1}, {req}')
+            rcptlist = ModelRcptListItem.get_by_id(rcpt.list_id)
             rcpt.excluded = False if command == 'include_rcpt' else True
             if rcpt.excluded:
                 rcptlist.except_count += 1
